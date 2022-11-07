@@ -1,0 +1,103 @@
+---
+- name: Deploy LAMP on a slave using ansible
+  hosts: altschool-slave
+  become: true # Perform all the Ansible playbook tasks as another user.
+  become_user: root # Default username to be used by Ansible
+
+  tasks:
+    - name: Update all packages to their latest
+      ansible.builtin.apt:
+        name: "*"
+        state: latest
+        update_cache: yes
+
+    - name: Install wget git apache2 and curl
+      ansible.builtin.apt:
+        name: 
+        - wget
+        - git
+        - curl
+        - ufw
+        state: latest
+
+    - name: ufw enabled
+      community.general.ufw:
+        state: "enabled"
+        policy: "deny"
+        logging: "on"
+
+    - name: ufw rules
+      community.general.ufw:
+        rule: "allow"
+        port: "{{ item }}"
+        proto: "tcp"
+      with_items:
+        - "22"
+        - "80"
+        - "443"
+
+    - name: Installing Mysql  and dependencies
+      package:
+        name: "{{item}}"
+        state: present
+        update_cache: yes
+      loop:
+        - mysql-server
+        - mysql-client
+        - python3-mysqldb
+        - libmysqlclient-dev
+      become: yes
+
+    - name: start and enable mysql service
+      service:
+         name: mysql
+         state: started
+         enabled: yes
+
+    - name: creating mysql user (ubuntu)
+      mysql_user:
+        name: ubuntu
+        password: ubuntu123
+        priv: '*.*:ALL'
+        host: '%'
+        state: present
+
+    - name: creating project__db
+      mysql_db:
+        name: project_db
+        state: present
+
+    - name: Enable remote login to mysql
+      lineinfile:
+        path: /etc/mysql/mysql.conf.d/mysqld.cnf
+        regexp: '^bind-address'
+        line: 'bind-address = 0.0.0.0'
+        backup: yes
+      notify:
+        - Restart mysql
+
+    - name: Install Apache
+      apt:
+        name: apache2
+        state: latest
+      become: yes
+
+    - name: index.html
+      copy: 
+        content: "Project done"
+        dest: /var/www/html/index.html
+      become: yes
+
+    - name: restart apache2
+      service:
+        name: apache2
+        state: restarted
+        enabled: yes
+      become: yes
+
+
+  handlers:
+    - name: Restart mysql
+      service:
+        name: mysql
+        state: restarted

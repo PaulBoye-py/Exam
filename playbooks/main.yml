@@ -82,18 +82,63 @@
         state: latest
       become: yes
 
-    - name: index.html
-      copy: 
-        content: "Project done"
-        dest: /var/www/html/index.html
-      become: yes
-
     - name: restart apache2
       service:
         name: apache2
         state: restarted
         enabled: yes
       become: yes
+
+    - name: Install php and other deps
+      command: sudo apt install php-cli php-mbstring git unzip -y
+
+    - name: Install composer
+      command: curl -sS https://getcomposer.org/installer -o composer-setup.php
+
+    - name: Export composer latest hash as environ. variable 
+      command: echo $HASH
+      environment:
+        HASH: '`curl -sS https://composer.github.io/installer.sig`'
+
+    - name: Setup Composer
+      command: php composer-setup.php --install-dir=/usr/local/bin --filename=composer
+
+    - name: Give Composer Permissions
+      command: chmod +x /usr/local/bin/composer
+
+      # - name: Clone the Laravel App from Git
+      #command: git clone https://github.com/f1amy/laravel-realworld-example-app.git Project
+
+    - name: Install wget package (Debian based)
+      action: apt pkg='wget' state=present
+
+    - name: cd into the Project dir and install composer
+      command: sudo composer install (yes)
+      args:
+        chdir: "~/Project"
+
+    - name: Move Project to right folder and deploy
+      command: sudo mv Project /var/www && cd /var/www/Project
+
+    - name: Change ownership permissions in the home directory
+      command: sudo chown -R www-data:www-data /var/www/Project
+      args:
+        chdir: /~
+
+    - name: Change user permissions
+      command: sudo chmod -R 775 /var/www/Project/storage
+
+    - name: Change user permissions for bootstrap
+      command: sudo chmod -R 775 /var/www/Project/bootstrap/cache
+
+    - name: Copy the env variable
+      command: sudo cp .env.example .env
+
+    - name: Change the appropriate values
+      ansible.builtin.lineinfile:
+        path: /var/www/Project/.env
+        regexp: '^APP_NAME='
+        line: APP_NAME=padar
 
 
   handlers:

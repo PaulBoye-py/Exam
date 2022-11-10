@@ -1,7 +1,7 @@
 ---
 - name: Deploy LAMP on a slave using ansible
   hosts: altschool-slave
-  become: true # Perform all the Ansible playbook tasks as another user.
+  become: yes # Perform all the Ansible playbook tasks as another user.
   become_user: root # Default username to be used by Ansible
 
   tasks:
@@ -89,6 +89,25 @@
         enabled: yes
       become: yes
 
+    - name: Installing Remi Repository
+      yum:
+      name: https://rpms.remirepo.net/enterprise/remi-release-7.rpm
+      state: present
+
+    - name: Installing php
+      yum:
+      enablerepo: "remi,remi-php80" # If you intent to install a different version of PHP, you can change the repo according. Eg : "remi,remi-php74"
+      name:
+      - php
+      - php-common
+      - php-cli
+      - php-gd
+      - php-curl #You can add or remove PHP extensions according to your choice
+      - php-mysqlnd
+      - php-fpm
+      - php-mysqli
+      state: latest
+
     - name: Install php and other deps
       command: sudo apt install php-cli php-mbstring git unzip -y
 
@@ -112,10 +131,18 @@
     - name: Install wget package (Debian based)
       action: apt pkg='wget' state=present
 
-    - name: cd into the Project dir and install composer
-      command: sudo composer install (yes)
-      args:
-        chdir: "~/Project"
+- name: cd into the Project dir and install composer
+  hosts: altschool-slave
+  become: no
+  composer:
+    command: install
+    working_dir: /path/to/Project
+
+- name: Deploy LAMP on a slave using ansible
+  hosts: altschool-slave
+  become: yes # Perform all the Ansible playbook tasks as another user.
+  become_user: root # Default username to be used by Ansible
+  tasks:
 
     - name: Move Project to right folder and deploy
       command: sudo mv Project /var/www && cd /var/www/Project
@@ -123,7 +150,7 @@
     - name: Change ownership permissions in the home directory
       command: sudo chown -R www-data:www-data /var/www/Project
       args:
-        chdir: /~
+        chdir: /~/
 
     - name: Change user permissions
       command: sudo chmod -R 775 /var/www/Project/storage

@@ -126,10 +126,15 @@
       with_items:
         - CREATE DATABASE laravelapp;
 
+    - name: Drop previously created users
+      command: 'mysql -ne "{{ item }}"'
+      with_items:
+        - DROP USER 'laravelapp'@'localhost';
+
     - name: Create DB User
       command: 'mysql -ne "{{ item }}"'
       with_items:
-        - CREATE USER 'laravelapp'@'localhost' IDENTIFIED BY 'laravelapp';
+        - CREATE USER 'laravelapp'@'localhost' IDENTIFIED WITH mysql_native_password BY 'laravelapp';
 
     - name: Grant user all privileges
       command: 'mysql -ne "{{ item }}"'
@@ -141,19 +146,19 @@
       with_items:
         - FLUSH PRIVILEGES;
 
-    - name: Info from PostgreSQL Git
-      copy:
-        src: /home/skylarng89/github/altschool-cloud-exercises/second_semester_exam/pgsql.sh
-        dest: /root
-        mode: '0775'
+          #- name: Info from PostgreSQL Git
+          #copy:
+          #src: ~/altschool-cloud-exercises/Altschool-exam/postgre.sh
+          #dest: /root
+          #mode: '0775'
 
-    - name: Bash pgsql
-      command: bash /root/pgsql.sh
+          #- name: Bash pgsql
+          #command: bash /root/postgre.sh
 
-    - name: Clone Git Laravel App
-      git:
-        repo: https://github.com/f1amy/laravel-realworld-example-app.git
-        dest: /var/www/laravelapp
+          #- name: Clone Git Laravel App
+          #git:
+          #repo: https://github.com/f1amy/laravel-realworld-example-app.git
+          #dest: /var/www/laravelapp
 
     - name: Config Laravel App
       copy:
@@ -317,6 +322,6 @@
 
     - name: Apply certbot
       shell:
-        cmd: yes | certbot --apache --agree-tos --redirect -m paul-roju@contact.me -d paul-roju.me -d www.paul-roju.me
+        cmd: yes | certbot --apache --agree-tos --redirect --force-interactive -m paul-roju@contact.me -d paul-roju.me -d www.paul-roju.me
 
 
